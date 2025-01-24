@@ -1,0 +1,54 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  color: #333;
+  text-align: center;
+  margin: 0;
+  padding: 0;
+}
+
+.container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+#word-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin: 20px 0;
+}
+
+.word {
+  padding: 15px;
+  background-color: #fff;
+  border: 1px solid #ccc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.word.selected {
+  background-color: #d3f8d3;
+}
+
+#submit-button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  background-color: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 5px;
+}
+
+#submit-button:disabled {
+  background-color: #ccc;
+  cursor: not-allowed;
+}
+
+#result-message {
+  margin-top: 20px;
+  font-size: 18px;
+  font-weight: bold;
+}
