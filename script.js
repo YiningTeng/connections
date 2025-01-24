@@ -28,14 +28,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // Fetch high score from Google Sheets
 async function fetchHighScore() {
-  const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`
-  );
-  const data = await response.json();
-  if (data.values) {
-    highScore = parseInt(data.values[0][0]);
-    highScorePlayer = data.values[0][1];
-    highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
+  try {
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.values) {
+      highScore = parseInt(data.values[0][0]);
+      highScorePlayer = data.values[0][1];
+      highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
+    }
+  } catch (error) {
+    console.error("Error fetching high score:", error);
   }
 }
 
@@ -45,14 +48,16 @@ async function saveScore(playerName) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
-    await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`,
-      {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
+    try {
+      await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
-      }
-    );
+      });
+    } catch (error) {
+      console.error("Error saving score:", error);
+    }
   }
 }
 
@@ -68,24 +73,33 @@ async function startNewGame() {
 
 // Generate words using Gemini API
 async function generateWords() {
-  const prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each.";
-  const response = await fetch(`https://api.gemini.com/v1/generate?key=${GEMINI_API_KEY}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
-  });
-  const data = await response.json();
-  return data.words; // Adjust based on Gemini API response structure
+  const prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    });
+    const data = await response.json();
+    const words = data.candidates[0].content.parts[0].text.split(",").map((word) => word.trim());
+    return words;
+  } catch (error) {
+    console.error("Error generating words:", error);
+    return ["word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8", "word9", "word10", "word11", "word12", "word13", "word14", "word15", "word16"]; // Fallback words
+  }
 }
 
 // Generate correct groups (mock function, replace with actual logic)
 async function generateCorrectGroups(words) {
   // This is a placeholder. You'll need to implement logic to group words into 4 categories.
   return [
-    ["word1", "word2", "word3", "word4"],
-    ["word5", "word6", "word7", "word8"],
-    ["word9", "word10", "word11", "word12"],
-    ["word13", "word14", "word15", "word16"],
+    [words[0], words[1], words[2], words[3]],
+    [words[4], words[5], words[6], words[7]],
+    [words[8], words[9], words[10], words[11]],
+    [words[12], words[13], words[14], words[15]],
   ];
 }
 
