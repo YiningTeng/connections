@@ -31,9 +31,11 @@ async function fetchHighScore() {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
   try {
     const response = await fetch(url);
+
     if (!response.ok) {
-      throw new Error(`Google Sheets API error! Status: ${response.status}, Message: ${await response.text()}`);
+      throw new Error(`Google Sheets error: ${response.status} ${response.statusText}`);
     }
+
     const data = await response.json();
     if (data.values) {
       highScore = parseInt(data.values[0][0]);
@@ -53,14 +55,11 @@ async function saveScore(playerName) {
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
     try {
-      const response = await fetch(url, {
+      await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
       });
-      if (!response.ok) {
-        throw new Error(`Google Sheets API error! Status: ${response.status}, Message: ${await response.text()}`);
-      }
     } catch (error) {
       console.error("Error saving score:", error);
     }
@@ -79,44 +78,36 @@ async function startNewGame() {
 
 // Generate words using Gemini API
 async function generateWords() {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta2/models/gemini-1.5:generateText?key=${GEMINI_API_KEY}`;
 
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: { text: "Generate a list of words related to technology." },
-        maxOutputTokens: 64,
+        prompt: {
+          text: "Generate a list of words related to technology"
+        },
+        temperature: 0.7
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API error! Status: ${response.status}, Message: ${await response.text()}`);
+      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
     }
 
     const data = await response.json();
-    console.log("Gemini API Response:", data); // Log the full response for debugging
-
-    // Extract and process the generated text
     const generatedText = data.candidates[0].output;
     const words = generatedText.split(",").map((word) => word.trim());
-
     return words;
   } catch (error) {
     console.error("Error generating words:", error);
-
-    // Fallback words
-    return [
-      "word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8",
-      "word9", "word10", "word11", "word12", "word13", "word14", "word15", "word16",
-    ];
+    return ["fallback", "words", "here"];
   }
 }
 
 // Generate correct groups (mock function, replace with actual logic)
 async function generateCorrectGroups(words) {
-  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
   return [
     [words[0], words[1], words[2], words[3]],
     [words[4], words[5], words[6], words[7]],
