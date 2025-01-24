@@ -31,6 +31,9 @@ async function fetchHighScore() {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
   try {
     const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`Google Sheets API error! Status: ${response.status}, Message: ${await response.text()}`);
+    }
     const data = await response.json();
     if (data.values) {
       highScore = parseInt(data.values[0][0]);
@@ -50,11 +53,14 @@ async function saveScore(playerName) {
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
       });
+      if (!response.ok) {
+        throw new Error(`Google Sheets API error! Status: ${response.status}, Message: ${await response.text()}`);
+      }
     } catch (error) {
       console.error("Error saving score:", error);
     }
@@ -80,20 +86,20 @@ async function generateWords() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: "Generate a list of words related to technology" }] }],
+        prompt: { text: "Generate a list of words related to technology." },
+        maxOutputTokens: 64,
       }),
     });
 
-    // Check if the response is OK
     if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
+      throw new Error(`Gemini API error! Status: ${response.status}, Message: ${await response.text()}`);
     }
 
     const data = await response.json();
-    console.log("API Response:", data); // Log the full response for debugging
+    console.log("Gemini API Response:", data); // Log the full response for debugging
 
     // Extract and process the generated text
-    const generatedText = data.candidates[0].content.parts[0].text;
+    const generatedText = data.candidates[0].output;
     const words = generatedText.split(",").map((word) => word.trim());
 
     return words;
