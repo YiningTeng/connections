@@ -73,22 +73,38 @@ async function startNewGame() {
 
 // Generate words using Gemini API
 async function generateWords() {
-  const prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
+        contents: [{ parts: [{ text: "Generate a list of words related to technology" }] }],
       }),
     });
+
+    // Check if the response is OK
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
+
     const data = await response.json();
-    const words = data.candidates[0].content.parts[0].text.split(",").map((word) => word.trim());
+    console.log("API Response:", data); // Log the full response for debugging
+
+    // Extract and process the generated text
+    const generatedText = data.candidates[0].content.parts[0].text;
+    const words = generatedText.split(",").map((word) => word.trim());
+
     return words;
   } catch (error) {
     console.error("Error generating words:", error);
-    return ["word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8", "word9", "word10", "word11", "word12", "word13", "word14", "word15", "word16"]; // Fallback words
+
+    // Fallback words
+    return [
+      "word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8",
+      "word9", "word10", "word11", "word12", "word13", "word14", "word15", "word16",
+    ];
   }
 }
 
