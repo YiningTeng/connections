@@ -8,7 +8,7 @@ let highScore = 0;
 let highScorePlayer = "Player";
 let selectedWords = [];
 let correctGroups = [];
-let foundGroups = [];
+let allWords = []; // Store all words for the current game
 
 // DOM Elements
 const wordGrid = document.getElementById("word-grid");
@@ -20,235 +20,166 @@ const highScoreDisplay = document.getElementById("high-score");
 const nameInputContainer = document.getElementById("name-input-container");
 const playerNameInput = document.getElementById("player-name");
 const saveNameButton = document.getElementById("save-name-button");
-const groupsContainer = document.getElementById("groups-container");
 
+// Initialize game
 document.addEventListener("DOMContentLoaded", () => {
   fetchHighScore();
   startNewGame();
 });
 
-// [Keep existing fetchHighScore() and saveScore() functions same]
-
-async function startNewGame() {
+// Fetch high score from Google Sheets
+async function fetchHighScore() {
+  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
   try {
-    const result = await generatePuzzle();
-    correctGroups = result.groups;
-    foundGroups = [];
-    renderWordGrid(result.words);
-    selectedWords = [];
-    submitButton.disabled = false;
-    resultMessage.textContent = "";
-    lives = 3;
-    livesDisplay.textContent = `Lives: ${lives}`;
-    score = 0;
-    scoreDisplay.textContent = `Score: ${score}`;
-    groupsContainer.innerHTML = "";
+    const response = await fetch(url);
+    const data = await response.json();
+    if (data.values) {
+      highScore = parseInt(data.values[0][0]);
+      highScorePlayer = data.values[0][1];
+      highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
+    }
   } catch (error) {
-    console.error("Error starting new game:", error);
-    resultMessage.textContent = "Failed to start new game. Please try again.";
+    console.error("Error fetching high score:", error);
   }
 }
 
-async function generatePuzzle() {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
+// Save score to Google Sheets
+async function saveScore(playerName) {
+  if (score > highScore) {
+    highScore = score;
+    highScorePlayer = playerName;
+    highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
+    try {
+      await fetch(url, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
+      });
+    } catch (error) {
+      console.error("Error saving score:", error);
+    }
+  }
+}
 
+// Start a new game
+async function startNewGame() {
+  allWords = await generateWords();
+  correctGroups = await generateCorrectGroups(allWords);
+  renderWordGrid(allWords);
+  selectedWords = [];
+  submitButton.disabled = false;
+  resultMessage.textContent = "";
+}
+
+// Generate words using Gemini API
+async function generateWords() {
+  const prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   try {
     const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [{
-            text: `Create a connections puzzle with 4 groups of 4 words each. 
-            Each group should have a clear theme. Format exactly like:
-            
-            Group 1: [Theme] - word1, word2, word3, word4
-            Group 2: [Theme] - word1, word2, word3, word4
-            Group 3: [Theme] - word1, word2, word3, word4
-            Group 4: [Theme] - word1, word2, word3, word4
-            
-            Themes should be specific categories, not obvious. Mix related technical terms from different domains.`
-          }]
-        }],
-        generationConfig: { temperature: 0.7 }
+        contents: [{ parts: [{ text: prompt }] }],
       }),
     });
-
-    if (!response.ok) throw new Error(`API error: ${response.status}`);
-    
     const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-    return this.parsePuzzleResponse(text);
+    const words = data.candidates[0].content.parts[0].text.split(",").map((word) => word.trim());
+    console.log("Generated words:", words); // Debugging
+    return words;
   } catch (error) {
-    console.error("Error generating puzzle:", error);
-    return this.getFallbackPuzzle();
+    console.error("Error generating words:", error);
+    return ["word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8", "word9", "word10", "word11", "word12", "word13", "word14", "word15", "word16"]; // Fallback words
   }
 }
 
-function parsePuzzleResponse(text) {
-  const groups = [];
-  const allWords = [];
-  
-  text.split('\n').forEach(line => {
-    const match = line.match(/Group \d+: \[(.*?)\] - (.*)/);
-    if (match) {
-      const theme = match[1];
-      const words = match[2].split(/,\s*/).map(w => w.trim());
-      groups.push({ theme, words });
-      allWords.push(...words);
-    }
-  });
-
-  if (groups.length !== 4 || allWords.length !== 16) {
-    throw new Error("Invalid puzzle format");
-  }
-
-  return {
-    words: this.shuffleArray(allWords),
-    groups: groups.map(g => ({
-      theme: g.theme,
-      words: g.words.map(w => w.toLowerCase())
-    }))
-  };
+// Generate correct groups (mock function, replace with actual logic)
+async function generateCorrectGroups(words) {
+  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
+  return [
+    [words[0], words[1], words[2], words[3]],
+    [words[4], words[5], words[6], words[7]],
+    [words[8], words[9], words[10], words[11]],
+    [words[12], words[13], words[14], words[15]],
+  ];
 }
 
-function getFallbackPuzzle() {
-  return {
-    words: this.shuffleArray([
-      "Python", "Java", "CSS", "HTML",
-      "Neptune", "Mars", "Venus", "Earth",
-      "Bitcoin", "Ethereum", "Wallet", "Blockchain",
-      "Router", "Firewall", "DNS", "IP"
-    ]),
-    groups: [
-      {
-        theme: "Programming Languages",
-        words: ["python", "java", "css", "html"]
-      },
-      {
-        theme: "Planets",
-        words: ["neptune", "mars", "venus", "earth"]
-      },
-      {
-        theme: "Cryptocurrency",
-        words: ["bitcoin", "ethereum", "wallet", "blockchain"]
-      },
-      {
-        theme: "Networking",
-        words: ["router", "firewall", "dns", "ip"]
-      }
-    ]
-  };
-}
-
-function shuffleArray(array) {
-  return array.sort(() => Math.random() - 0.5);
-}
-
+// Render word grid
 function renderWordGrid(words) {
-  wordGrid.innerHTML = "";
-  words.forEach(word => {
+  wordGrid.innerHTML = ""; // Clear the grid
+  words.forEach((word) => {
     const wordElement = document.createElement("div");
-    wordElement.className = `word${selectedWords.includes(word) ? " selected" : ""}`;
+    wordElement.classList.add("word");
     wordElement.textContent = word;
+    if (selectedWords.includes(word)) {
+      wordElement.classList.add("selected"); // Highlight selected words
+    }
     wordElement.addEventListener("click", () => toggleSelection(word));
     wordGrid.appendChild(wordElement);
   });
 }
 
+// Toggle word selection
 function toggleSelection(word) {
-  if (foundGroups.some(g => g.words.includes(word.toLowerCase()))) return;
-  
-  const index = selectedWords.indexOf(word);
-  if (index > -1) {
-    selectedWords.splice(index, 1);
-  } else if (selectedWords.length < 4) {
+  if (selectedWords.includes(word)) {
+    selectedWords = selectedWords.filter((w) => w !== word);
+  } else {
     selectedWords.push(word);
   }
-  renderWordGrid([...wordGrid.children].map(el => el.textContent));
+  renderWordGrid(allWords); // Re-render the grid with updated selections
 }
 
-submitButton.addEventListener("click", async () => {
-  if (selectedWords.length !== 4) {
-    resultMessage.textContent = "Please select exactly 4 words.";
-    return;
-  }
-
-  const selected = selectedWords.map(w => w.toLowerCase());
-  const matchedGroup = correctGroups.find(g => 
-    g.words.every(w => selected.includes(w)) &&
-    !foundGroups.some(fg => fg.theme === g.theme)
-  );
-
-  if (matchedGroup) {
-    foundGroups.push(matchedGroup);
-    score += 400 - (foundGroups.length - 1) * 100;
-    resultMessage.textContent = `Correct! ${matchedGroup.theme}`;
-    scoreDisplay.textContent = `Score: ${score}`;
-    
-    if (foundGroups.length === 4) {
-      endGame(true);
+// Submit selected words
+submitButton.addEventListener("click", () => {
+  if (selectedWords.length === 4) {
+    const isCorrect = checkCorrectGroup(selectedWords);
+    if (isCorrect) {
+      resultMessage.textContent = "Correct!";
+      score += 100;
+      scoreDisplay.textContent = `Score: ${score}`;
+      if (score > highScore) {
+        nameInputContainer.style.display = "block";
+      } else {
+        startNewGame();
+      }
     } else {
-      renderFoundGroups();
-      selectedWords = [];
-      renderWordGrid([...wordGrid.children].map(el => el.textContent));
+      resultMessage.textContent = "Incorrect! Try again.";
+      lives--;
+      score -= 10;
+      scoreDisplay.textContent = `Score: ${score}`;
+      livesDisplay.textContent = `Lives: ${lives}`;
+      if (lives === 0) {
+        endGame();
+      }
     }
   } else {
-    lives--;
-    score = Math.max(0, score - 100);
-    resultMessage.textContent = `Incorrect! ${4 - foundGroups.length} groups remaining`;
-    livesDisplay.textContent = `Lives: ${lives}`;
-    selectedWords = [];
-    renderWordGrid([...wordGrid.children].map(el => el.textContent));
-    
-    if (lives <= 0) endGame(false);
+    resultMessage.textContent = "Please select exactly 4 words.";
   }
 });
 
-function renderFoundGroups() {
-  groupsContainer.innerHTML = "<h3>Found Groups:</h3>";
-  foundGroups.forEach(group => {
-    const div = document.createElement("div");
-    div.className = "found-group";
-    div.innerHTML = `
-      <strong>${group.theme}</strong>: 
-      ${group.words.join(', ')}
-    `;
-    groupsContainer.appendChild(div);
-  });
-}
-
-function endGame(won) {
-  submitButton.disabled = true;
-  const allGroups = correctGroups.map(g => ({
-    ...g,
-    found: foundGroups.some(fg => fg.theme === g.theme)
-  }));
-
-  groupsContainer.innerHTML = "<h3>All Groups:</h3>";
-  allGroups.forEach(group => {
-    const div = document.createElement("div");
-    div.className = `group ${group.found ? "found" : "missed"}`;
-    div.innerHTML = `
-      <strong>${group.theme}</strong>: 
-      ${group.words.join(', ')}
-    `;
-    groupsContainer.appendChild(div);
-  });
-
-  resultMessage.textContent = won ? 
-    "Congratulations! You won!" : 
-    `Game Over! Final Score: ${score}`;
-    
-  if (score > highScore) {
-    nameInputContainer.style.display = "block";
+// Save player name and update high score
+saveNameButton.addEventListener("click", () => {
+  const playerName = playerNameInput.value.trim();
+  if (playerName) {
+    saveScore(playerName);
+    nameInputContainer.style.display = "none";
+    startNewGame();
   } else {
-    setTimeout(() => {
-      if (confirm(`${won ? 'You won! ' : ''}Play again?`)) {
-        startNewGame();
-      }
-    }, 1000);
+    alert("Please enter your name.");
   }
+});
+
+// Check if selected words form a correct group
+function checkCorrectGroup(selectedWords) {
+  return correctGroups.some((group) =>
+    group.every((word) => selectedWords.includes(word))
+  );
 }
 
-// [Keep existing saveNameButton event listener and helper functions]
+// End the game
+function endGame() {
+  submitButton.disabled = true;
+  resultMessage.textContent = `Game Over! Final Score: ${score}`;
+  saveScore(highScorePlayer);
+}
