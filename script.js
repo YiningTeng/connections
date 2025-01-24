@@ -134,10 +134,16 @@ function renderWordGrid(words) {
 
 // Toggle word selection
 function toggleSelection(word) {
+  // Check if the word is part of a found group
+  const isFound = foundGroups.some((group) => group.includes(word));
+  if (isFound) {
+    return; // Do nothing if the word is part of a found group
+  }
+
   if (selectedWords.includes(word)) {
-    selectedWords = selectedWords.filter((w) => w !== word);
+    selectedWords = selectedWords.filter((w) => w !== word); // Unselect the word
   } else {
-    selectedWords.push(word);
+    selectedWords.push(word); // Select the word
   }
   renderWordGrid(allWords); // Re-render the grid with updated selections
 }
