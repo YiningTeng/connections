@@ -78,7 +78,7 @@ async function startNewGame() {
 
 // Generate words using Gemini API
 async function generateWords() {
-  const url = `https://generativelanguage.googleapis.com/v1beta2/models/gemini-1.5:generateText?key=${GEMINI_API_KEY}`;
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${GEMINI_API_KEY}`;
 
   try {
     const response = await fetch(url, {
