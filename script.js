@@ -1,10 +1,11 @@
 const GEMINI_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
 const GOOGLE_SHEETS_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
-const SHEET_ID = "YOUR_SHEET_ID"; // Replace with your Google Sheets ID
+const SHEET_ID = "1MEslIMhdD9VQm9OspPjVYLi1tUdQVLhlCZY0aur0qQM";
 
 let score = 0;
 let lives = 3;
 let highScore = 0;
+let highScorePlayer = "Player";
 let selectedWords = [];
 let correctGroups = [];
 
@@ -15,6 +16,9 @@ const resultMessage = document.getElementById("result-message");
 const scoreDisplay = document.getElementById("score");
 const livesDisplay = document.getElementById("lives");
 const highScoreDisplay = document.getElementById("high-score");
+const nameInputContainer = document.getElementById("name-input-container");
+const playerNameInput = document.getElementById("player-name");
+const saveNameButton = document.getElementById("save-name-button");
 
 // Initialize game
 document.addEventListener("DOMContentLoaded", () => {
@@ -25,24 +29,28 @@ document.addEventListener("DOMContentLoaded", () => {
 // Fetch high score from Google Sheets
 async function fetchHighScore() {
   const response = await fetch(
-    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1?key=${GOOGLE_SHEETS_API_KEY}`
+    `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`
   );
   const data = await response.json();
-  highScore = data.values ? parseInt(data.values[0][0]) : 0;
-  highScoreDisplay.textContent = `High Score: ${highScore}`;
+  if (data.values) {
+    highScore = parseInt(data.values[0][0]);
+    highScorePlayer = data.values[0][1];
+    highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
+  }
 }
 
 // Save score to Google Sheets
-async function saveScore() {
+async function saveScore(playerName) {
   if (score > highScore) {
     highScore = score;
-    highScoreDisplay.textContent = `High Score: ${highScore}`;
+    highScorePlayer = playerName;
+    highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`,
+      `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`,
       {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [[highScore]] }),
+        body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
       }
     );
   }
@@ -111,7 +119,11 @@ submitButton.addEventListener("click", () => {
       resultMessage.textContent = "Correct!";
       score += 100;
       scoreDisplay.textContent = `Score: ${score}`;
-      startNewGame();
+      if (score > highScore) {
+        nameInputContainer.style.display = "block";
+      } else {
+        startNewGame();
+      }
     } else {
       resultMessage.textContent = "Incorrect! Try again.";
       lives--;
@@ -127,6 +139,18 @@ submitButton.addEventListener("click", () => {
   }
 });
 
+// Save player name and update high score
+saveNameButton.addEventListener("click", () => {
+  const playerName = playerNameInput.value.trim();
+  if (playerName) {
+    saveScore(playerName);
+    nameInputContainer.style.display = "none";
+    startNewGame();
+  } else {
+    alert("Please enter your name.");
+  }
+});
+
 // Check if selected words form a correct group
 function checkCorrectGroup(selectedWords) {
   return correctGroups.some((group) =>
@@ -138,5 +162,5 @@ function checkCorrectGroup(selectedWords) {
 function endGame() {
   submitButton.disabled = true;
   resultMessage.textContent = `Game Over! Final Score: ${score}`;
-  saveScore();
+  saveScore(highScorePlayer);
 }
