@@ -9,6 +9,7 @@ let highScorePlayer = "Player";
 let selectedWords = [];
 let correctGroups = [];
 let allWords = []; // Store all words for the current game
+let foundGroups = []; // Track found correct groups
 
 // DOM Elements
 const wordGrid = document.getElementById("word-grid");
@@ -66,10 +67,13 @@ async function saveScore(playerName) {
 async function startNewGame() {
   allWords = await generateWords();
   correctGroups = await generateCorrectGroups(allWords);
+  foundGroups = []; // Reset found groups
   renderWordGrid(allWords);
   selectedWords = [];
   submitButton.disabled = false;
   resultMessage.textContent = "";
+  lives = 3; // Reset lives
+  livesDisplay.textContent = `Lives: ${lives}`;
 }
 
 // Generate words using Gemini API
@@ -111,6 +115,14 @@ function renderWordGrid(words) {
   words.forEach((word) => {
     const wordElement = document.createElement("div");
     wordElement.classList.add("word");
+
+    // Check if the word is part of a found group
+    const isFound = foundGroups.some((group) => group.includes(word));
+    if (isFound) {
+      wordElement.classList.add("found"); // Mark found words
+      wordElement.style.pointerEvents = "none"; // Disable further clicks
+    }
+
     wordElement.textContent = word;
     if (selectedWords.includes(word)) {
       wordElement.classList.add("selected"); // Highlight selected words
@@ -138,10 +150,13 @@ submitButton.addEventListener("click", () => {
       resultMessage.textContent = "Correct!";
       score += 100;
       scoreDisplay.textContent = `Score: ${score}`;
-      if (score > highScore) {
-        nameInputContainer.style.display = "block";
+      foundGroups.push(selectedWords); // Add to found groups
+      if (foundGroups.length === correctGroups.length) {
+        // All groups found, start a new game
+        resultMessage.textContent = "All groups found! Starting a new game...";
+        setTimeout(() => startNewGame(), 2000);
       } else {
-        startNewGame();
+        renderWordGrid(allWords); // Re-render to mark found words
       }
     } else {
       resultMessage.textContent = "Incorrect! Try again.";
@@ -182,4 +197,28 @@ function endGame() {
   submitButton.disabled = true;
   resultMessage.textContent = `Game Over! Final Score: ${score}`;
   saveScore(highScorePlayer);
+  showCorrectGroups();
+}
+
+// Show correct groups when the game ends
+function showCorrectGroups() {
+  wordGrid.innerHTML = ""; // Clear the grid
+  correctGroups.forEach((group, index) => {
+    const groupContainer = document.createElement("div");
+    groupContainer.classList.add("group-container");
+    groupContainer.style.backgroundColor = getGroupColor(index); // Assign a unique color
+    group.forEach((word) => {
+      const wordElement = document.createElement("div");
+      wordElement.classList.add("word");
+      wordElement.textContent = word;
+      groupContainer.appendChild(wordElement);
+    });
+    wordGrid.appendChild(groupContainer);
+  });
+}
+
+// Get a unique color for each group
+function getGroupColor(index) {
+  const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"]; // Light red, green, blue, pink
+  return colors[index % colors.length];
 }
