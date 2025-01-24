@@ -1,5 +1,5 @@
-const GEMINI_API_KEY = "AIzaSyBV_OgIoOLkpr-i4iEOc4HtMzvDxLKpP-Q";
-const GOOGLE_SHEETS_API_KEY = "AIzaSyBV_OgIoOLkpr-i4iEOc4HtMzvDxLKpP-Q";
+const GEMINI_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
+const GOOGLE_SHEETS_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
 const SHEET_ID = "1MEslIMhdD9VQm9OspPjVYLi1tUdQVLhlCZY0aur0qQM";
 
 let score = 0;
