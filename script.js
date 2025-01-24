@@ -31,15 +31,15 @@ async function fetchHighScore() {
   const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
   try {
     const response = await fetch(url);
-
+    
     if (!response.ok) {
-      throw new Error(`Google Sheets error: ${response.status} ${response.statusText}`);
+      throw new Error(`Google Sheets error: ${response.status}`);
     }
 
     const data = await response.json();
-    if (data.values) {
-      highScore = parseInt(data.values[0][0]);
-      highScorePlayer = data.values[0][1];
+    if (data.values && data.values.length > 0) {
+      highScore = parseInt(data.values[0][0]) || 0;
+      highScorePlayer = data.values[0][1] || "Player";
       highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     }
   } catch (error) {
@@ -50,16 +50,24 @@ async function fetchHighScore() {
 // Save score to Google Sheets
 async function saveScore(playerName) {
   if (score > highScore) {
-    highScore = score;
-    highScorePlayer = playerName;
-    highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=USER_ENTERED&key=${GOOGLE_SHEETS_API_KEY}`;
+    
     try {
-      await fetch(url, {
+      const response = await fetch(url, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
+        body: JSON.stringify({
+          values: [[score.toString(), playerName]]
+        }),
       });
+
+      if (!response.ok) {
+        throw new Error(`Sheets update failed: ${response.status}`);
+      }
+
+      highScore = score;
+      highScorePlayer = playerName;
+      highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     } catch (error) {
       console.error("Error saving score:", error);
     }
@@ -68,12 +76,19 @@ async function saveScore(playerName) {
 
 // Start a new game
 async function startNewGame() {
-  const words = await generateWords();
-  correctGroups = await generateCorrectGroups(words);
-  renderWordGrid(words);
-  selectedWords = [];
-  submitButton.disabled = false;
-  resultMessage.textContent = "";
+  try {
+    const words = await generateWords();
+    correctGroups = await generateCorrectGroups(words);
+    renderWordGrid(words);
+    selectedWords = [];
+    submitButton.disabled = false;
+    resultMessage.textContent = "";
+    lives = 3;
+    livesDisplay.textContent = `Lives: ${lives}`;
+  } catch (error) {
+    console.error("Error starting new game:", error);
+    resultMessage.textContent = "Failed to start new game. Please try again.";
+  }
 }
 
 // Generate words using Gemini API
@@ -85,109 +100,143 @@ async function generateWords() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        prompt: {
-          text: "Generate a list of words related to technology"
-        },
-        temperature: 0.7
+        contents: [{
+          parts: [{
+            text: "Generate 16 unique, single-word terms related to technology trends, separated by commas. Avoid phrases and special characters."
+          }]
+        }],
+        generationConfig: {
+          temperature: 0.7,
+          topK: 40,
+          topP: 0.95
+        }
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+      throw new Error(`API error: ${response.status} ${await response.text()}`);
     }
 
     const data = await response.json();
-    const generatedText = data.candidates[0].output;
-    const words = generatedText.split(",").map((word) => word.trim());
+    const generatedText = data.candidates[0].content.parts[0].text;
+    const words = generatedText.split(/,\s*/)
+                      .map(word => word.trim().replace(/\.$/, ''))
+                      .filter(word => word.length > 0)
+                      .slice(0, 16);
+
+    if (words.length !== 16) {
+      throw new Error("Didn't receive exactly 16 words");
+    }
+
     return words;
   } catch (error) {
     console.error("Error generating words:", error);
-    return ["fallback", "words", "here"];
+    return Array(16).fill("technology").map((w, i) => `${w}-${i+1}`);
   }
 }
 
-// Generate correct groups (mock function, replace with actual logic)
+// Generate correct groups (placeholder implementation)
 async function generateCorrectGroups(words) {
+  // This should be replaced with actual grouping logic
   return [
-    [words[0], words[1], words[2], words[3]],
-    [words[4], words[5], words[6], words[7]],
-    [words[8], words[9], words[10], words[11]],
-    [words[12], words[13], words[14], words[15]],
+    words.slice(0, 4),
+    words.slice(4, 8),
+    words.slice(8, 12),
+    words.slice(12, 16)
   ];
 }
 
-// Render word grid
+// Render word grid with selection handling
 function renderWordGrid(words) {
   wordGrid.innerHTML = "";
   words.forEach((word) => {
     const wordElement = document.createElement("div");
-    wordElement.classList.add("word");
+    wordElement.className = `word${selectedWords.includes(word) ? " selected" : ""}`;
     wordElement.textContent = word;
     wordElement.addEventListener("click", () => toggleSelection(word));
     wordGrid.appendChild(wordElement);
   });
 }
 
-// Toggle word selection
+// Toggle word selection with visual feedback
 function toggleSelection(word) {
-  if (selectedWords.includes(word)) {
-    selectedWords = selectedWords.filter((w) => w !== word);
+  const index = selectedWords.indexOf(word);
+  if (index > -1) {
+    selectedWords.splice(index, 1);
   } else {
-    selectedWords.push(word);
+    if (selectedWords.length < 4) {
+      selectedWords.push(word);
+    }
   }
-  renderWordGrid([...wordGrid.children].map((el) => el.textContent));
+  renderWordGrid([...wordGrid.children].map(el => el.textContent));
 }
 
 // Submit selected words
-submitButton.addEventListener("click", () => {
-  if (selectedWords.length === 4) {
-    const isCorrect = checkCorrectGroup(selectedWords);
+submitButton.addEventListener("click", async () => {
+  try {
+    if (selectedWords.length !== 4) {
+      resultMessage.textContent = "Please select exactly 4 words.";
+      return;
+    }
+
+    const isCorrect = correctGroups.some(group => 
+      group.every(word => selectedWords.includes(word))
+    );
+
     if (isCorrect) {
-      resultMessage.textContent = "Correct!";
+      resultMessage.textContent = "Correct! +100 points";
       score += 100;
       scoreDisplay.textContent = `Score: ${score}`;
+      
       if (score > highScore) {
         nameInputContainer.style.display = "block";
       } else {
-        startNewGame();
+        await startNewGame();
       }
     } else {
-      resultMessage.textContent = "Incorrect! Try again.";
+      resultMessage.textContent = "Incorrect! -10 points, -1 life";
       lives--;
-      score -= 10;
+      score = Math.max(0, score - 10);
       scoreDisplay.textContent = `Score: ${score}`;
       livesDisplay.textContent = `Lives: ${lives}`;
-      if (lives === 0) {
+
+      if (lives <= 0) {
         endGame();
       }
     }
-  } else {
-    resultMessage.textContent = "Please select exactly 4 words.";
+  } catch (error) {
+    console.error("Error handling submission:", error);
+    resultMessage.textContent = "An error occurred. Please try again.";
   }
 });
 
 // Save player name and update high score
-saveNameButton.addEventListener("click", () => {
+saveNameButton.addEventListener("click", async () => {
   const playerName = playerNameInput.value.trim();
-  if (playerName) {
-    saveScore(playerName);
-    nameInputContainer.style.display = "none";
-    startNewGame();
-  } else {
+  if (!playerName) {
     alert("Please enter your name.");
+    return;
+  }
+
+  try {
+    await saveScore(playerName);
+    nameInputContainer.style.display = "none";
+    await startNewGame();
+  } catch (error) {
+    console.error("Error saving name:", error);
+    resultMessage.textContent = "Failed to save score. Please try again.";
   }
 });
-
-// Check if selected words form a correct group
-function checkCorrectGroup(selectedWords) {
-  return correctGroups.some((group) =>
-    group.every((word) => selectedWords.includes(word))
-  );
-}
 
 // End the game
 function endGame() {
   submitButton.disabled = true;
   resultMessage.textContent = `Game Over! Final Score: ${score}`;
   saveScore(highScorePlayer);
+  setTimeout(() => {
+    if (confirm(`Game Over! Score: ${score}. Play again?`)) {
+      score = 0;
+      startNewGame();
+    }
+  }, 100);
 }
