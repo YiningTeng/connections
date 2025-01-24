@@ -142,8 +142,8 @@ function toggleSelection(word) {
 
   if (selectedWords.includes(word)) {
     selectedWords = selectedWords.filter((w) => w !== word); // Unselect the word
-  } else {
-    selectedWords.push(word); // Select the word
+  } else if (selectedWords.length < 4) {
+    selectedWords.push(word); // Select the word (only if less than 4 are selected)
   }
   renderWordGrid(allWords); // Re-render the grid with updated selections
 }
@@ -157,6 +157,7 @@ submitButton.addEventListener("click", () => {
       score += 100;
       scoreDisplay.textContent = `Score: ${score}`;
       foundGroups.push(selectedWords); // Add to found groups
+      selectedWords = []; // Reset selected words
       if (foundGroups.length === correctGroups.length) {
         // All groups found, start a new game
         resultMessage.textContent = "All groups found! Starting a new game...";
@@ -170,6 +171,8 @@ submitButton.addEventListener("click", () => {
       score -= 10;
       scoreDisplay.textContent = `Score: ${score}`;
       livesDisplay.textContent = `Lives: ${lives}`;
+      selectedWords = []; // Clear selected words after incorrect guess
+      renderWordGrid(allWords); // Re-render the grid
       if (lives === 0) {
         endGame();
       }
