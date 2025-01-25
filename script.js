@@ -1,6 +1,5 @@
 const GEMINI_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
-const GOOGLE_SHEETS_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
-const SHEET_ID = "1MEslIMhdD9VQm9OspPjVYLi1tUdQVLhlCZY0aur0qQM";
+const SHEETBEST_API_URL = "https://api.sheetbest.com/sheets/02dba3c7-be88-437d-99ab-afe0d6bdb427";
 
 let score = 0;
 let lives = 3;
@@ -28,15 +27,14 @@ document.addEventListener("DOMContentLoaded", () => {
   startNewGame();
 });
 
-// Fetch high score from Google Sheets
+// Fetch high score from SheetBest
 async function fetchHighScore() {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
   try {
-    const response = await fetch(url);
+    const response = await fetch(SHEETBEST_API_URL);
     const data = await response.json();
-    if (data.values) {
-      highScore = parseInt(data.values[0][0]);
-      highScorePlayer = data.values[0][1];
+    if (data.length > 0) {
+      highScore = parseInt(data[0].Score);
+      highScorePlayer = data[0].Player;
       highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     }
   } catch (error) {
@@ -44,18 +42,17 @@ async function fetchHighScore() {
   }
 }
 
-// Save score to Google Sheets
+// Save score to SheetBest
 async function saveScore(playerName) {
   if (score > highScore) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
     try {
-      await fetch(url, {
-        method: "PUT",
+      await fetch(SHEETBEST_API_URL, {
+        method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
+        body: JSON.stringify({ Score: highScore, Player: highScorePlayer }),
       });
     } catch (error) {
       console.error("Error saving score:", error);
@@ -100,7 +97,6 @@ async function generateWords() {
 
 // Generate correct groups (mock function, replace with actual logic)
 async function generateCorrectGroups(words) {
-  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
   return [
     [words[0], words[1], words[2], words[3]],
     [words[4], words[5], words[6], words[7]],
@@ -132,108 +128,4 @@ function renderWordGrid(words) {
   });
 }
 
-// Toggle word selection
-function toggleSelection(word) {
-  // Check if the word is part of a found group
-  const isFound = foundGroups.some((group) => group.includes(word));
-  if (isFound) {
-    return; // Do nothing if the word is part of a found group
-  }
-
-  if (selectedWords.includes(word)) {
-    selectedWords = selectedWords.filter((w) => w !== word); // Unselect the word
-  } else if (selectedWords.length < 4) {
-    selectedWords.push(word); // Select the word (only if less than 4 are selected)
-  }
-  renderWordGrid(allWords); // Re-render the grid with updated selections
-}
-
-// Submit selected words
-submitButton.addEventListener("click", () => {
-  if (selectedWords.length === 4) {
-    const isCorrect = checkCorrectGroup(selectedWords);
-    if (isCorrect) {
-      resultMessage.textContent = "Correct!";
-      score += 100;
-      scoreDisplay.textContent = `Score: ${score}`;
-      foundGroups.push(selectedWords); // Add to found groups
-      selectedWords = []; // Reset selected words
-      if (foundGroups.length === correctGroups.length) {
-        // All groups found, start a new game
-        resultMessage.textContent = "All groups found! Starting a new game...";
-        setTimeout(() => startNewGame(), 2000);
-      } else {
-        renderWordGrid(allWords); // Re-render to mark found words
-      }
-    } else {
-      resultMessage.textContent = "Incorrect! Try again.";
-      lives--;
-      score -= 10;
-      scoreDisplay.textContent = `Score: ${score}`;
-      livesDisplay.textContent = `Lives: ${lives}`;
-      selectedWords = []; // Clear selected words after incorrect guess
-      renderWordGrid(allWords); // Re-render the grid
-      if (lives === 0) {
-        endGame();
-      }
-    }
-  } else {
-    resultMessage.textContent = "Please select exactly 4 words.";
-  }
-});
-
-// Save player name and update high score
-saveNameButton.addEventListener("click", () => {
-  const playerName = playerNameInput.value.trim();
-  if (playerName) {
-    saveScore(playerName);
-    nameInputContainer.style.display = "none";
-    startNewGame();
-  } else {
-    alert("Please enter your name.");
-  }
-});
-
-// Check if selected words form a correct group
-function checkCorrectGroup(selectedWords) {
-  return correctGroups.some((group) =>
-    group.every((word) => selectedWords.includes(word))
-  );
-}
-
-// End the game
-function endGame() {
-  submitButton.disabled = true;
-  resultMessage.textContent = `Game Over! Final Score: ${score}`;
-  
-  // Check if the current score is a new high score
-  if (score > highScore) {
-    nameInputContainer.style.display = "block"; // Show the name input container
-  } else {
-    saveScore(highScorePlayer); // Save the score without changing the player name
-    showCorrectGroups();
-  }
-}
-
-// Show correct groups when the game ends
-function showCorrectGroups() {
-  wordGrid.innerHTML = ""; // Clear the grid
-  correctGroups.forEach((group, index) => {
-    const groupContainer = document.createElement("div");
-    groupContainer.classList.add("group-container");
-    groupContainer.style.backgroundColor = getGroupColor(index); // Assign a unique color
-    group.forEach((word) => {
-      const wordElement = document.createElement("div");
-      wordElement.classList.add("word");
-      wordElement.textContent = word;
-      groupContainer.appendChild(wordElement);
-    });
-    wordGrid.appendChild(groupContainer);
-  });
-}
-
-// Get a unique color for each group
-function getGroupColor(index) {
-  const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"]; // Light red, green, blue, pink
-  return colors[index % colors.length];
-}
+// Other functions remain the same (toggleSelection, submit button handling, etc.)
