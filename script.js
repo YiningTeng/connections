@@ -265,6 +265,7 @@ function endGame() {
   // Check if the current score is a new high score
   if (score > highScore) {
     nameInputContainer.style.display = "block"; // Show the name input container
+    showCorrectGroups();
   } else {
     saveScore(highScorePlayer); // Save the score without changing the player name
     showCorrectGroups();
