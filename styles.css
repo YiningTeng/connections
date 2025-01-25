@@ -227,3 +227,16 @@ h1 {
   background-color: inherit; /* Inherit group container color */
   border: none;
 }
+
+/* Update h1 link color */
+h1 a {
+  color: #00ffcc !important;
+  text-decoration: none;
+  text-shadow: 0 0 10px rgba(0, 255, 204, 0.3);
+}
+
+h1 a:hover,
+h1 a:visited {
+  color: #00ffcc !important;
+  text-decoration: none;
+}
