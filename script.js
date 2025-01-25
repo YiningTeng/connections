@@ -36,9 +36,15 @@ async function fetchHighScore() {
 
     // Ensure the data is in the correct format
     if (Array.isArray(data) && data.length > 0) {
-      const firstRow = data[0];
-      highScore = parseInt(firstRow.highScore) || 0;
-      highScorePlayer = firstRow.playerName || "Player";
+      // Find the row with the highest score
+      let maxScoreRow = data.reduce((max, row) => {
+        const rowScore = parseInt(row.highScore) || 0;
+        const maxScore = parseInt(max.highScore) || 0;
+        return rowScore > maxScore ? row : max;
+      }, { highScore: 0, playerName: "Player" });
+
+      highScore = parseInt(maxScoreRow.highScore) || 0;
+      highScorePlayer = maxScoreRow.playerName || "Player";
       highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     }
   } catch (error) {
@@ -46,36 +52,26 @@ async function fetchHighScore() {
   }
 }
 
-// Save score to SheetBest (overwrite the existing row)
+// Save score to SheetBest
 async function saveScore(playerName) {
   if (score > highScore) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
 
-    const payload = [
-      {
-        playerName: highScorePlayer,
-        highScore: highScore,
-      },
-    ];
+    const payload = {
+      playerName: highScorePlayer,
+      highScore: highScore,
+    };
 
     try {
-      // Step 1: Clear the sheet by writing an empty array
-      await fetch(SHEETBEST_URL, {
+      const response = await fetch(SHEETBEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify([]), // Clear the sheet
+        body: JSON.stringify(payload),
       });
-
-      // Step 2: Write the new high score data
-      const saveResponse = await fetch(SHEETBEST_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload), // Write the new data
-      });
-      const saveData = await saveResponse.json();
-      console.log("Score saved successfully:", saveData); // Debugging
+      const data = await response.json();
+      console.log("Score saved successfully:", data); // Debugging
     } catch (error) {
       console.error("Error saving score:", error);
     }
