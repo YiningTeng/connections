@@ -205,8 +205,14 @@ function checkCorrectGroup(selectedWords) {
 function endGame() {
   submitButton.disabled = true;
   resultMessage.textContent = `Game Over! Final Score: ${score}`;
-  saveScore(highScorePlayer);
-  showCorrectGroups();
+  
+  // Check if the current score is a new high score
+  if (score > highScore) {
+    nameInputContainer.style.display = "block"; // Show the name input container
+  } else {
+    saveScore(highScorePlayer); // Save the score without changing the player name
+    showCorrectGroups();
+  }
 }
 
 // Show correct groups when the game ends
