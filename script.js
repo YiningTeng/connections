@@ -79,6 +79,8 @@ async function saveScore(playerName) {
       console.error("Error saving score:", error);
     }
   }
+  score = 0;
+  highScore = 0;
 }
 
 // Start a new game
@@ -244,7 +246,6 @@ saveNameButton.addEventListener("click", () => {
   if (playerName) {
     saveScore(playerName);
     nameInputContainer.style.display = "none";
-    score = 0;
     startNewGame();
   } else {
     alert("Please enter your name.");
