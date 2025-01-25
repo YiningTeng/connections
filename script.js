@@ -83,7 +83,7 @@ async function saveScore(playerName) {
 // Start a new game
 async function startNewGame() {
   allWords = await generateWords();
-  correctGroups = await generateCorrectGroups(allWords);
+  correctGroups = generateCorrectGroups(allWords); // Generate correct groups after shuffling
   foundGroups = []; // Reset found groups
   renderWordGrid(allWords);
   selectedWords = [];
@@ -118,15 +118,26 @@ async function generateWords() {
   }
 }
 
-// Generate correct groups (mock function, replace with actual logic)
-async function generateCorrectGroups(words) {
-  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
-  return [
+// Generate correct groups based on the shuffled words
+function generateCorrectGroups(words) {
+  // Create a map of word to its index for quick lookup
+  const wordToIndex = new Map();
+  words.forEach((word, index) => wordToIndex.set(word, index));
+
+  // Define the original correct groups (before shuffling)
+  const originalGroups = [
     [words[0], words[1], words[2], words[3]],
     [words[4], words[5], words[6], words[7]],
     [words[8], words[9], words[10], words[11]],
     [words[12], words[13], words[14], words[15]],
   ];
+
+  // Map the original groups to the shuffled words
+  const shuffledGroups = originalGroups.map((group) =>
+    group.map((word) => words[wordToIndex.get(word)])
+  );
+
+  return shuffledGroups;
 }
 
 // Render word grid
@@ -263,18 +274,5 @@ function shuffleArray(array) {
   for (let i = array.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
-  }
-}
-
-// Calculate difficulty level based on score
-function getDifficultyLevel() {
-  if (score < 500) {
-    return Math.floor(Math.random() * 6) + 5; // Random number between 5 and 10
-  } else if (score >= 500 && score < 1500) {
-    return Math.floor(Math.random() * 31) + 20; // Random number between 20 and 50
-  } else if (score >= 1500 && score < 2500) {
-    return Math.floor(Math.random() * 36) + 35; // Random number between 35 and 70
-  } else {
-    return Math.floor(Math.random() * 31) + 70; // Random number between 70 and 100
   }
 }
