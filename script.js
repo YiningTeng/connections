@@ -46,26 +46,40 @@ async function fetchHighScore() {
   }
 }
 
-// Save score to SheetBest
+// Save score to SheetBest (overwrite the existing row)
 async function saveScore(playerName) {
   if (score > highScore) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
 
-    const payload = {
-      highScore: highScore,
-      playerName: highScorePlayer,
-    };
+    const payload = [
+      {
+        playerName: highScorePlayer,
+        highScore: highScore,
+      },
+    ];
 
     try {
-      const response = await fetch(SHEETBEST_URL, {
+      // Fetch existing data
+      const response = await fetch(SHEETBEST_URL);
+      const data = await response.json();
+      console.log("Existing data:", data); // Debugging
+
+      // Overwrite the first row with the new high score
+      if (Array.isArray(data) && data.length > 0) {
+        data[0].playerName = highScorePlayer;
+        data[0].highScore = highScore;
+      }
+
+      // Save the updated data back to SheetBest
+      const saveResponse = await fetch(SHEETBEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const data = await response.json();
-      console.log("Score saved successfully:", data); // Debugging
+      const saveData = await saveResponse.json();
+      console.log("Score saved successfully:", saveData); // Debugging
     } catch (error) {
       console.error("Error saving score:", error);
     }
