@@ -1,5 +1,5 @@
 const GEMINI_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
-const SHEETBEST_API_URL = "https://api.sheetbest.com/sheets/02dba3c7-be88-437d-99ab-afe0d6bdb427";
+const SHEETBEST_URL = "https://api.sheetbest.com/sheets/02dba3c7-be88-437d-99ab-afe0d6bdb427";
 
 let score = 0;
 let lives = 3;
@@ -30,11 +30,11 @@ document.addEventListener("DOMContentLoaded", () => {
 // Fetch high score from SheetBest
 async function fetchHighScore() {
   try {
-    const response = await fetch(SHEETBEST_API_URL);
+    const response = await fetch(SHEETBEST_URL);
     const data = await response.json();
     if (data.length > 0) {
-      highScore = parseInt(data[0].Score);
-      highScorePlayer = data[0].Player;
+      highScore = parseInt(data[0].highScore);
+      highScorePlayer = data[0].playerName;
       highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     }
   } catch (error) {
@@ -48,11 +48,17 @@ async function saveScore(playerName) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
+
+    const payload = {
+      highScore: highScore,
+      playerName: highScorePlayer,
+    };
+
     try {
-      await fetch(SHEETBEST_API_URL, {
+      await fetch(SHEETBEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ Score: highScore, Player: highScorePlayer }),
+        body: JSON.stringify(payload),
       });
     } catch (error) {
       console.error("Error saving score:", error);
@@ -97,6 +103,7 @@ async function generateWords() {
 
 // Generate correct groups (mock function, replace with actual logic)
 async function generateCorrectGroups(words) {
+  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
   return [
     [words[0], words[1], words[2], words[3]],
     [words[4], words[5], words[6], words[7]],
@@ -130,7 +137,9 @@ function renderWordGrid(words) {
 
 // Toggle word selection
 function toggleSelection(word) {
-  if (foundGroups.some((group) => group.includes(word))) {
+  // Check if the word is part of a found group
+  const isFound = foundGroups.some((group) => group.includes(word));
+  if (isFound) {
     return; // Do nothing if the word is part of a found group
   }
 
@@ -153,6 +162,7 @@ submitButton.addEventListener("click", () => {
       foundGroups.push(selectedWords); // Add to found groups
       selectedWords = []; // Reset selected words
       if (foundGroups.length === correctGroups.length) {
+        // All groups found, start a new game
         resultMessage.textContent = "All groups found! Starting a new game...";
         setTimeout(() => startNewGame(), 2000);
       } else {
@@ -198,7 +208,8 @@ function checkCorrectGroup(selectedWords) {
 function endGame() {
   submitButton.disabled = true;
   resultMessage.textContent = `Game Over! Final Score: ${score}`;
-
+  
+  // Check if the current score is a new high score
   if (score > highScore) {
     nameInputContainer.style.display = "block"; // Show the name input container
   } else {
