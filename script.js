@@ -1,7 +1,3 @@
-const GEMINI_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
-const GOOGLE_SHEETS_API_KEY = "AIzaSyAhRpckHInrN1ff2Inqe5OSEyk-ltdMnYc";
-const SHEET_ID = "1MEslIMhdD9VQm9OspPjVYLi1tUdQVLhlCZY0aur0qQM";
-
 let score = 0;
 let lives = 3;
 let highScore = 0;
@@ -22,40 +18,46 @@ const nameInputContainer = document.getElementById("name-input-container");
 const playerNameInput = document.getElementById("player-name");
 const saveNameButton = document.getElementById("save-name-button");
 
+// Path to the local CSV file
+const CSV_FILE_PATH = "highscores.csv";
+
 // Initialize game
 document.addEventListener("DOMContentLoaded", () => {
   fetchHighScore();
   startNewGame();
 });
 
-// Fetch high score from Google Sheets
+// Fetch high score from the local CSV file
 async function fetchHighScore() {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?key=${GOOGLE_SHEETS_API_KEY}`;
   try {
-    const response = await fetch(url);
-    const data = await response.json();
-    if (data.values) {
-      highScore = parseInt(data.values[0][0]);
-      highScorePlayer = data.values[0][1];
-      highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
-    }
+    const response = await fetch(CSV_FILE_PATH);
+    const data = await response.text();
+    const [highScoreValue, highScorePlayerValue] = data.split(",");
+    highScore = parseInt(highScoreValue) || 0;
+    highScorePlayer = highScorePlayerValue || "Player";
+    highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
   } catch (error) {
     console.error("Error fetching high score:", error);
+    highScoreDisplay.textContent = "High Score: 0 by Player";
   }
 }
 
-// Save score to Google Sheets
+// Save score to the local CSV file
 async function saveScore(playerName) {
   if (score > highScore) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/Sheet1!A1:B1?valueInputOption=RAW&key=${GOOGLE_SHEETS_API_KEY}`;
+
+    // Prepare the CSV content
+    const csvContent = `${highScore},${highScorePlayer}`;
+
+    // Save to the CSV file
     try {
-      await fetch(url, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ values: [[highScore, highScorePlayer]] }),
+      await fetch(CSV_FILE_PATH, {
+        method: "POST",
+        headers: { "Content-Type": "text/csv" },
+        body: csvContent,
       });
     } catch (error) {
       console.error("Error saving score:", error);
@@ -205,7 +207,7 @@ function checkCorrectGroup(selectedWords) {
 function endGame() {
   submitButton.disabled = true;
   resultMessage.textContent = `Game Over! Final Score: ${score}`;
-  
+
   // Check if the current score is a new high score
   if (score > highScore) {
     nameInputContainer.style.display = "block"; // Show the name input container
