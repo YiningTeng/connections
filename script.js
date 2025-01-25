@@ -55,11 +55,13 @@ async function saveScore(playerName) {
     };
 
     try {
-      await fetch(SHEETBEST_URL, {
+      const response = await fetch(SHEETBEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const data = await response.json();
+      console.log("Score saved successfully:", data);
     } catch (error) {
       console.error("Error saving score:", error);
     }
