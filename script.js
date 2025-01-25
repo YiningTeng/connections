@@ -108,6 +108,9 @@ async function generateWords() {
     const data = await response.json();
     const words = data.candidates[0].content.parts[0].text.split(",").map((word) => word.trim());
     console.log("Generated words:", words); // Debugging
+
+    // Randomize the positions of the words
+    shuffleArray(words);
     return words;
   } catch (error) {
     console.error("Error generating words:", error);
@@ -253,4 +256,25 @@ function showCorrectGroups() {
 function getGroupColor(index) {
   const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"]; // Light red, green, blue, pink
   return colors[index % colors.length];
+}
+
+// Shuffle an array (Fisher-Yates algorithm)
+function shuffleArray(array) {
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+}
+
+// Calculate difficulty level based on score
+function getDifficultyLevel() {
+  if (score < 500) {
+    return Math.floor(Math.random() * 6) + 5; // Random number between 5 and 10
+  } else if (score >= 500 && score < 1500) {
+    return Math.floor(Math.random() * 31) + 20; // Random number between 20 and 50
+  } else if (score >= 1500 && score < 2500) {
+    return Math.floor(Math.random() * 36) + 35; // Random number between 35 and 70
+  } else {
+    return Math.floor(Math.random() * 31) + 70; // Random number between 70 and 100
+  }
 }
