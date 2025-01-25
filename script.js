@@ -86,6 +86,7 @@ async function startNewGame() {
   updateDifficultyLevel(); // Update difficulty level based on score
   allWords = await generateWords();
   correctGroups = await generateCorrectGroups(allWords);
+  shuffleWords(); // Shuffle the words
   foundGroups = []; // Reset found groups
   renderWordGrid(allWords);
   selectedWords = [];
@@ -112,6 +113,15 @@ function updateDifficultyLevel() {
 // Generate a random number between min and max (inclusive)
 function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Shuffle the words array
+function shuffleWords() {
+  for (let i = allWords.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
+  }
+  console.log("Shuffled words:", allWords); // Debugging
 }
 
 // Generate words using Gemini API
@@ -243,7 +253,7 @@ saveNameButton.addEventListener("click", () => {
 // Check if selected words form a correct group
 function checkCorrectGroup(selectedWords) {
   return correctGroups.some((group) =>
-    group.every((word) => selectedWords.includes(word))
+    selectedWords.every((word) => group.includes(word))
   );
 }
 
