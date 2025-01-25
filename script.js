@@ -81,6 +81,7 @@ async function saveScore(playerName) {
   }
   score = 0;
   highScore = 0;
+  scoreDisplay.textContent = `Score: ${score}`;
 }
 
 // Start a new game
