@@ -244,6 +244,7 @@ saveNameButton.addEventListener("click", () => {
   if (playerName) {
     saveScore(playerName);
     nameInputContainer.style.display = "none";
+    score = 0;
     startNewGame();
   } else {
     alert("Please enter your name.");
