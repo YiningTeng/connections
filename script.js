@@ -32,9 +32,13 @@ async function fetchHighScore() {
   try {
     const response = await fetch(SHEETBEST_URL);
     const data = await response.json();
-    if (data.length > 0) {
-      highScore = parseInt(data[0].highScore);
-      highScorePlayer = data[0].playerName;
+    console.log("Fetched data:", data); // Debugging
+
+    // Ensure the data is in the correct format
+    if (Array.isArray(data) && data.length > 0) {
+      const firstRow = data[0];
+      highScore = parseInt(firstRow.highScore) || 0;
+      highScorePlayer = firstRow.playerName || "Player";
       highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     }
   } catch (error) {
@@ -61,7 +65,7 @@ async function saveScore(playerName) {
         body: JSON.stringify(payload),
       });
       const data = await response.json();
-      console.log("Score saved successfully:", data);
+      console.log("Score saved successfully:", data); // Debugging
     } catch (error) {
       console.error("Error saving score:", error);
     }
