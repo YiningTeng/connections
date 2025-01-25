@@ -6,10 +6,10 @@ let lives = 3;
 let highScore = 0;
 let highScorePlayer = "Player";
 let selectedWords = [];
-let correctGroups = []; // Store correct groups with their category names
-let allWords = []; // Store all words for the current game
-let foundGroups = []; // Track found correct groups
-let difficultyLevel = 0; // Difficulty level (0 to 100)
+let correctGroups = [];
+let allWords = [];
+let foundGroups = [];
+let difficultyLevel = 0;
 
 // DOM Elements
 const wordGrid = document.getElementById("word-grid");
@@ -28,24 +28,18 @@ document.addEventListener("DOMContentLoaded", () => {
   startNewGame();
 });
 
-// Fetch high score from SheetBest
 async function fetchHighScore() {
   try {
     const response = await fetch(SHEETBEST_URL);
     const data = await response.json();
-    console.log("Fetched data:", data); // Debugging
-
-    // Ensure the data is in the correct format
     if (Array.isArray(data) && data.length > 0) {
-      // Find the row with the highest score
-      let maxScoreRow = data.reduce((max, row) => {
+      const maxScoreRow = data.reduce((max, row) => {
         const rowScore = parseInt(row.highScore) || 0;
-        const maxScore = parseInt(max.highScore) || 0;
-        return rowScore > maxScore ? row : max;
+        return rowScore > max.highScore ? { highScore: rowScore, playerName: row.playerName } : max;
       }, { highScore: 0, playerName: "Player" });
-
-      highScore = parseInt(maxScoreRow.highScore) || 0;
-      highScorePlayer = maxScoreRow.playerName || "Player";
+      
+      highScore = maxScoreRow.highScore;
+      highScorePlayer = maxScoreRow.playerName;
       highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
     }
   } catch (error) {
@@ -53,233 +47,183 @@ async function fetchHighScore() {
   }
 }
 
-// Save score to SheetBest
 async function saveScore(playerName) {
   if (score > highScore) {
     highScore = score;
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
 
-    const payload = [
-      {
-        playerName: highScorePlayer,
-        highScore: highScore,
-      },
-    ];
-
     try {
-      const response = await fetch(SHEETBEST_URL, {
+      await fetch(SHEETBEST_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify([{ playerName, highScore }]),
       });
-      const data = await response.json();
-      console.log("Score saved successfully:", data); // Debugging
     } catch (error) {
       console.error("Error saving score:", error);
     }
   }
 }
 
-// Start a new game
 async function startNewGame() {
-  updateDifficultyLevel(); // Update difficulty level based on score
+  updateDifficultyLevel();
   allWords = await generateWords();
   correctGroups = await generateCorrectGroups(allWords);
-  shuffleWords(); // Shuffle the words
-  foundGroups = []; // Reset found groups
+  shuffleWords();
+  foundGroups = [];
   renderWordGrid(allWords);
   selectedWords = [];
   submitButton.disabled = false;
   resultMessage.textContent = "";
-  lives = 3; // Reset lives
+  lives = 3;
   livesDisplay.textContent = `Lives: ${lives}`;
 }
 
-// Update difficulty level based on score
 function updateDifficultyLevel() {
-  if (score < 500) {
-    difficultyLevel = getRandomNumber(5, 10);
-  } else if (score >= 500 && score < 1500) {
-    difficultyLevel = getRandomNumber(20, 50);
-  } else if (score >= 1500 && score < 2500) {
-    difficultyLevel = getRandomNumber(35, 70);
-  } else {
-    difficultyLevel = getRandomNumber(70, 100);
-  }
-  console.log("Difficulty Level:", difficultyLevel); // Debugging
+  if (score < 500) difficultyLevel = getRandomNumber(5, 10);
+  else if (score < 1500) difficultyLevel = getRandomNumber(20, 50);
+  else if (score < 2500) difficultyLevel = getRandomNumber(35, 70);
+  else difficultyLevel = getRandomNumber(70, 100);
 }
 
-// Generate a random number between min and max (inclusive)
 function getRandomNumber(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Shuffle the words array
 function shuffleWords() {
   for (let i = allWords.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [allWords[i], allWords[j]] = [allWords[j], allWords[i]];
   }
-  console.log("Shuffled words:", allWords); // Debugging
 }
 
-// Generate words using Gemini API
 async function generateWords() {
-  let prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+  let prompt = "Generate 16 random words for categorization. Return as comma-separated list.";
+  if (difficultyLevel >= 70) prompt = "Generate 16 complex words for categorization. Return as comma-separated list.";
+  else if (difficultyLevel >= 35) prompt = "Generate 16 moderately complex words for categorization. Return as comma-separated list.";
 
-  // Adjust prompt based on difficulty level
-  if (difficultyLevel >= 70) {
-    prompt = "Generate 16 complex and uncommon words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
-  } else if (difficultyLevel >= 35) {
-    prompt = "Generate 16 moderately complex words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
-  }
-
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
     });
     const data = await response.json();
-    const words = data.candidates[0].content.parts[0].text.split(",").map((word) => word.trim());
-    console.log("Generated words:", words); // Debugging
-    return words;
+    return data.candidates[0].content.parts[0].text.split(",").map(w => w.trim());
   } catch (error) {
     console.error("Error generating words:", error);
-    return ["word1", "word2", "word3", "word4", "word5", "word6", "word7", "word8", "word9", "word10", "word11", "word12", "word13", "word14", "word15", "word16"]; // Fallback words
+    return Array.from({length: 16}, (_, i) => `word${i+1}`);
   }
 }
 
-// Generate correct groups with category names
 async function generateCorrectGroups(words) {
-  const prompt = `Group the following 16 words into 4 categories of 4 words each. For each category, provide a name that describes the common theme. Return the result as a JSON object with the following structure:
+  const prompt = `Categorize these words into 4 groups with specific themes. Return valid JSON in this format:
   {
     "categories": [
-      {
-        "name": "Category Name 1",
-        "words": ["word1", "word2", "word3", "word4"]
-      },
-      {
-        "name": "Category Name 2",
-        "words": ["word5", "word6", "word7", "word8"]
-      },
-      {
-        "name": "Category Name 3",
-        "words": ["word9", "word10", "word11", "word12"]
-      },
-      {
-        "name": "Category Name 4",
-        "words": ["word13", "word14", "word15", "word16"]
-      }
+      {"name": "Theme1", "words": ["word1","word2","word3","word4"]},
+      {"name": "Theme2", "words": ["word5","word6","word7","word8"]},
+      {"name": "Theme3", "words": ["word9","word10","word11","word12"]},
+      {"name": "Theme4", "words": ["word13","word14","word15","word16"]}
     ]
-  }`;
+  }
+  Words: ${words.join(', ')}`;
 
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   try {
-    const response = await fetch(url, {
+    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-      }),
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
     });
     const data = await response.json();
-    const result = JSON.parse(data.candidates[0].content.parts[0].text);
-    console.log("Generated correct groups:", result); // Debugging
-    return result.categories;
+    const jsonString = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '');
+    return JSON.parse(jsonString).categories;
   } catch (error) {
-    console.error("Error generating correct groups:", error);
-    // Fallback groups
-    return [
-      { name: "Category 1", words: ["word1", "word2", "word3", "word4"] },
-      { name: "Category 2", words: ["word5", "word6", "word7", "word8"] },
-      { name: "Category 3", words: ["word9", "word10", "word11", "word12"] },
-      { name: "Category 4", words: ["word13", "word14", "word15", "word16"] },
-    ];
+    console.error("Error generating groups:", error);
+    return words.reduce((groups, word, i) => {
+      if(i % 4 === 0) groups.push({
+        name: `${word} Category`,
+        words: words.slice(i, i+4)
+      });
+      return groups;
+    }, []);
   }
 }
 
-// Render word grid
 function renderWordGrid(words) {
-  wordGrid.innerHTML = ""; // Clear the grid
-  words.forEach((word) => {
-    const wordElement = document.createElement("div");
-    wordElement.classList.add("word");
-
-    // Check if the word is part of a found group
-    const isFound = foundGroups.some((group) => group.words.includes(word));
-    if (isFound) {
-      wordElement.classList.add("found"); // Mark found words
-      wordElement.style.pointerEvents = "none"; // Disable further clicks
-    }
-
-    wordElement.textContent = word;
-    if (selectedWords.includes(word)) {
-      wordElement.classList.add("selected"); // Highlight selected words
-    }
-    wordElement.addEventListener("click", () => toggleSelection(word));
-    wordGrid.appendChild(wordElement);
-  });
+  wordGrid.innerHTML = words.map(word => {
+    const isFound = foundGroups.some(g => g.words.includes(word));
+    return `<div class="word ${isFound ? 'found' : ''} ${selectedWords.includes(word) ? 'selected' : ''}" 
+             style="${isFound ? 'pointer-events: none;' : ''}" 
+             onclick="toggleSelection('${word}')">${word}</div>`;
+  }).join('');
 }
 
-// Toggle word selection
 function toggleSelection(word) {
-  // Check if the word is part of a found group
-  const isFound = foundGroups.some((group) => group.words.includes(word));
-  if (isFound) {
-    return; // Do nothing if the word is part of a found group
-  }
-
-  if (selectedWords.includes(word)) {
-    selectedWords = selectedWords.filter((w) => w !== word); // Unselect the word
-  } else if (selectedWords.length < 4) {
-    selectedWords.push(word); // Select the word (only if less than 4 are selected)
-  }
-  renderWordGrid(allWords); // Re-render the grid with updated selections
+  if (foundGroups.some(g => g.words.includes(word))) return;
+  selectedWords = selectedWords.includes(word) 
+    ? selectedWords.filter(w => w !== word) 
+    : selectedWords.length < 4 ? [...selectedWords, word] : selectedWords;
+  renderWordGrid(allWords);
 }
 
-// Submit selected words
 submitButton.addEventListener("click", () => {
-  if (selectedWords.length === 4) {
-    const isCorrect = checkCorrectGroup(selectedWords);
-    if (isCorrect) {
-      resultMessage.textContent = "Correct!";
-      score += 100;
-      scoreDisplay.textContent = `Score: ${score}`;
-      const foundGroup = correctGroups.find((group) =>
-        selectedWords.every((word) => group.words.includes(word))
-      );
-      foundGroups.push(foundGroup); // Add to found groups
-      selectedWords = []; // Reset selected words
-      if (foundGroups.length === correctGroups.length) {
-        // All groups found, start a new game
-        resultMessage.textContent = "All groups found! Starting a new game...";
-        setTimeout(() => startNewGame(), 2000);
-      } else {
-        renderWordGrid(allWords); // Re-render to mark found words
-      }
-    } else {
-      resultMessage.textContent = "Incorrect! Try again.";
-      lives--;
-      score -= 10;
-      scoreDisplay.textContent = `Score: ${score}`;
-      livesDisplay.textContent = `Lives: ${lives}`;
-      selectedWords = []; // Clear selected words after incorrect guess
-      renderWordGrid(allWords); // Re-render the grid
-      if (lives === 0) {
-        endGame();
-      }
-    }
-  } else {
+  if (selectedWords.length !== 4) {
     resultMessage.textContent = "Please select exactly 4 words.";
+    return;
+  }
+
+  const isCorrect = correctGroups.some(group => 
+    selectedWords.every(word => group.words.includes(word))
+  );
+
+  if (isCorrect) {
+    handleCorrectAnswer();
+  } else {
+    handleIncorrectAnswer();
   }
 });
 
-// Save player name and update high score
+function handleCorrectAnswer() {
+  score += 100;
+  const foundGroup = correctGroups.find(g => 
+    selectedWords.every(word => g.words.includes(word))
+  );
+  foundGroups.push(foundGroup);
+  selectedWords = [];
+  resultMessage.textContent = "Correct!";
+  scoreDisplay.textContent = `Score: ${score}`;
+
+  if (foundGroups.length === correctGroups.length) {
+    resultMessage.textContent = "All groups found! Starting new game...";
+    setTimeout(startNewGame, 2000);
+  } else {
+    renderWordGrid(allWords);
+  }
+}
+
+function handleIncorrectAnswer() {
+  lives--;
+  score = Math.max(0, score - 10);
+  selectedWords = [];
+  resultMessage.textContent = "Incorrect! Try again.";
+  scoreDisplay.textContent = `Score: ${score}`;
+  livesDisplay.textContent = `Lives: ${lives}`;
+  renderWordGrid(allWords);
+  
+  if (lives <= 0) endGame();
+}
+
+function endGame() {
+  submitButton.disabled = true;
+  resultMessage.textContent = `Game Over! Final Score: ${score}`;
+  if (score > highScore) {
+    nameInputContainer.style.display = "block";
+  } else {
+    saveScore(highScorePlayer);
+    showCorrectGroups();
+  }
+}
+
 saveNameButton.addEventListener("click", () => {
   const playerName = playerNameInput.value.trim();
   if (playerName) {
@@ -291,54 +235,16 @@ saveNameButton.addEventListener("click", () => {
   }
 });
 
-// Check if selected words form a correct group
-function checkCorrectGroup(selectedWords) {
-  return correctGroups.some((group) =>
-    selectedWords.every((word) => group.words.includes(word))
-  );
-}
-
-// End the game
-function endGame() {
-  submitButton.disabled = true;
-  resultMessage.textContent = `Game Over! Final Score: ${score}`;
-  
-  // Check if the current score is a new high score
-  if (score > highScore) {
-    nameInputContainer.style.display = "block"; // Show the name input container
-  } else {
-    saveScore(highScorePlayer); // Save the score without changing the player name
-    showCorrectGroups();
-  }
-}
-
-// Show correct groups when the game ends
 function showCorrectGroups() {
-  wordGrid.innerHTML = ""; // Clear the grid
-  correctGroups.forEach((group, index) => {
-    const groupContainer = document.createElement("div");
-    groupContainer.classList.add("group-container");
-    groupContainer.style.backgroundColor = getGroupColor(index); // Assign a unique color
-
-    // Add category name
-    const categoryName = document.createElement("div");
-    categoryName.classList.add("category-name");
-    categoryName.textContent = group.name; // Use the actual category name
-    groupContainer.appendChild(categoryName);
-
-    // Add words
-    group.words.forEach((word) => {
-      const wordElement = document.createElement("div");
-      wordElement.classList.add("word");
-      wordElement.textContent = word; // Use the actual word
-      groupContainer.appendChild(wordElement);
-    });
-    wordGrid.appendChild(groupContainer);
-  });
+  wordGrid.innerHTML = correctGroups.map((group, i) => `
+    <div class="group-container" style="background-color: ${getGroupColor(i)}">
+      <div class="category-name">${group.name}</div>
+      ${group.words.map(word => `<div class="word">${word}</div>`).join('')}
+    </div>
+  `).join('');
 }
 
-// Get a unique color for each group
 function getGroupColor(index) {
-  const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"]; // Light red, green, blue, pink
+  const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"];
   return colors[index % colors.length];
 }
