@@ -9,6 +9,7 @@ let selectedWords = [];
 let correctGroups = [];
 let allWords = []; // Store all words for the current game
 let foundGroups = []; // Track found correct groups
+let difficultyLevel = 0; // Difficulty level (0 to 100)
 
 // DOM Elements
 const wordGrid = document.getElementById("word-grid");
@@ -82,8 +83,9 @@ async function saveScore(playerName) {
 
 // Start a new game
 async function startNewGame() {
+  updateDifficultyLevel(); // Update difficulty level based on score
   allWords = await generateWords();
-  correctGroups = generateCorrectGroups(allWords); // Generate correct groups after shuffling
+  correctGroups = await generateCorrectGroups(allWords);
   foundGroups = []; // Reset found groups
   renderWordGrid(allWords);
   selectedWords = [];
@@ -93,9 +95,36 @@ async function startNewGame() {
   livesDisplay.textContent = `Lives: ${lives}`;
 }
 
+// Update difficulty level based on score
+function updateDifficultyLevel() {
+  if (score < 500) {
+    difficultyLevel = getRandomNumber(5, 10);
+  } else if (score >= 500 && score < 1500) {
+    difficultyLevel = getRandomNumber(20, 50);
+  } else if (score >= 1500 && score < 2500) {
+    difficultyLevel = getRandomNumber(35, 70);
+  } else {
+    difficultyLevel = getRandomNumber(70, 100);
+  }
+  console.log("Difficulty Level:", difficultyLevel); // Debugging
+}
+
+// Generate a random number between min and max (inclusive)
+function getRandomNumber(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
 // Generate words using Gemini API
 async function generateWords() {
-  const prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+  let prompt = "Generate 16 random words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+
+  // Adjust prompt based on difficulty level
+  if (difficultyLevel >= 70) {
+    prompt = "Generate 16 complex and uncommon words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+  } else if (difficultyLevel >= 35) {
+    prompt = "Generate 16 moderately complex words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+  }
+
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
   try {
     const response = await fetch(url, {
@@ -108,9 +137,6 @@ async function generateWords() {
     const data = await response.json();
     const words = data.candidates[0].content.parts[0].text.split(",").map((word) => word.trim());
     console.log("Generated words:", words); // Debugging
-
-    // Randomize the positions of the words
-    shuffleArray(words);
     return words;
   } catch (error) {
     console.error("Error generating words:", error);
@@ -118,28 +144,15 @@ async function generateWords() {
   }
 }
 
-// Generate correct groups based on the shuffled words
-function generateCorrectGroups(words) {
-  // Create a map of word to its original group index
-  const wordToGroupIndex = new Map();
-
-  // Assign each word to its original group index (before shuffling)
-  for (let i = 0; i < words.length; i++) {
-    const groupIndex = Math.floor(i / 4); // 4 words per group
-    wordToGroupIndex.set(words[i], groupIndex);
-  }
-
-  // Group words by their original group index
-  const groups = new Map();
-  for (const [word, groupIndex] of wordToGroupIndex.entries()) {
-    if (!groups.has(groupIndex)) {
-      groups.set(groupIndex, []);
-    }
-    groups.get(groupIndex).push(word);
-  }
-
-  // Convert the groups map to an array of arrays
-  return Array.from(groups.values());
+// Generate correct groups (mock function, replace with actual logic)
+async function generateCorrectGroups(words) {
+  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
+  return [
+    [words[0], words[1], words[2], words[3]],
+    [words[4], words[5], words[6], words[7]],
+    [words[8], words[9], words[10], words[11]],
+    [words[12], words[13], words[14], words[15]],
+  ];
 }
 
 // Render word grid
@@ -269,12 +282,4 @@ function showCorrectGroups() {
 function getGroupColor(index) {
   const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"]; // Light red, green, blue, pink
   return colors[index % colors.length];
-}
-
-// Shuffle an array (Fisher-Yates algorithm)
-function shuffleArray(array) {
-  for (let i = array.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [array[i], array[j]] = [array[j], array[i]];
-  }
 }
