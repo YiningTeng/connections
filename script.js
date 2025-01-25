@@ -118,30 +118,24 @@ async function generateWords() {
   }
 }
 
-// Generate correct groups dynamically based on shuffled words
+// Generate correct groups based on the shuffled words
 function generateCorrectGroups(words) {
-  // Create a map of word to its category
-  const wordToCategory = new Map();
+  // Create a map of word to its original group index
+  const wordToGroupIndex = new Map();
 
-  // Assign each word to a category (e.g., 4 categories with 4 words each)
-  const categories = [
-    "Category A",
-    "Category B",
-    "Category C",
-    "Category D",
-  ];
+  // Assign each word to its original group index (before shuffling)
   for (let i = 0; i < words.length; i++) {
-    const category = categories[Math.floor(i / 4)];
-    wordToCategory.set(words[i], category);
+    const groupIndex = Math.floor(i / 4); // 4 words per group
+    wordToGroupIndex.set(words[i], groupIndex);
   }
 
-  // Group words by category
+  // Group words by their original group index
   const groups = new Map();
-  for (const [word, category] of wordToCategory.entries()) {
-    if (!groups.has(category)) {
-      groups.set(category, []);
+  for (const [word, groupIndex] of wordToGroupIndex.entries()) {
+    if (!groups.has(groupIndex)) {
+      groups.set(groupIndex, []);
     }
-    groups.get(category).push(word);
+    groups.get(groupIndex).push(word);
   }
 
   // Convert the groups map to an array of arrays
