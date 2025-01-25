@@ -59,10 +59,12 @@ async function saveScore(playerName) {
     highScorePlayer = playerName;
     highScoreDisplay.textContent = `High Score: ${highScore} by ${highScorePlayer}`;
 
-    const payload = {
-      playerName: highScorePlayer,
-      highScore: highScore,
-    };
+    const payload = [
+      {
+        playerName: highScorePlayer,
+        highScore: highScore,
+      },
+    ];
 
     try {
       const response = await fetch(SHEETBEST_URL, {
