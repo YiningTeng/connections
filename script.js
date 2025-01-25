@@ -128,4 +128,104 @@ function renderWordGrid(words) {
   });
 }
 
-// Other functions remain the same (toggleSelection, submit button handling, etc.)
+// Toggle word selection
+function toggleSelection(word) {
+  if (foundGroups.some((group) => group.includes(word))) {
+    return; // Do nothing if the word is part of a found group
+  }
+
+  if (selectedWords.includes(word)) {
+    selectedWords = selectedWords.filter((w) => w !== word); // Unselect the word
+  } else if (selectedWords.length < 4) {
+    selectedWords.push(word); // Select the word (only if less than 4 are selected)
+  }
+  renderWordGrid(allWords); // Re-render the grid with updated selections
+}
+
+// Submit selected words
+submitButton.addEventListener("click", () => {
+  if (selectedWords.length === 4) {
+    const isCorrect = checkCorrectGroup(selectedWords);
+    if (isCorrect) {
+      resultMessage.textContent = "Correct!";
+      score += 100;
+      scoreDisplay.textContent = `Score: ${score}`;
+      foundGroups.push(selectedWords); // Add to found groups
+      selectedWords = []; // Reset selected words
+      if (foundGroups.length === correctGroups.length) {
+        resultMessage.textContent = "All groups found! Starting a new game...";
+        setTimeout(() => startNewGame(), 2000);
+      } else {
+        renderWordGrid(allWords); // Re-render to mark found words
+      }
+    } else {
+      resultMessage.textContent = "Incorrect! Try again.";
+      lives--;
+      score -= 10;
+      scoreDisplay.textContent = `Score: ${score}`;
+      livesDisplay.textContent = `Lives: ${lives}`;
+      selectedWords = []; // Clear selected words after incorrect guess
+      renderWordGrid(allWords); // Re-render the grid
+      if (lives === 0) {
+        endGame();
+      }
+    }
+  } else {
+    resultMessage.textContent = "Please select exactly 4 words.";
+  }
+});
+
+// Save player name and update high score
+saveNameButton.addEventListener("click", () => {
+  const playerName = playerNameInput.value.trim();
+  if (playerName) {
+    saveScore(playerName);
+    nameInputContainer.style.display = "none";
+    startNewGame();
+  } else {
+    alert("Please enter your name.");
+  }
+});
+
+// Check if selected words form a correct group
+function checkCorrectGroup(selectedWords) {
+  return correctGroups.some((group) =>
+    group.every((word) => selectedWords.includes(word))
+  );
+}
+
+// End the game
+function endGame() {
+  submitButton.disabled = true;
+  resultMessage.textContent = `Game Over! Final Score: ${score}`;
+
+  if (score > highScore) {
+    nameInputContainer.style.display = "block"; // Show the name input container
+  } else {
+    saveScore(highScorePlayer); // Save the score without changing the player name
+    showCorrectGroups();
+  }
+}
+
+// Show correct groups when the game ends
+function showCorrectGroups() {
+  wordGrid.innerHTML = ""; // Clear the grid
+  correctGroups.forEach((group, index) => {
+    const groupContainer = document.createElement("div");
+    groupContainer.classList.add("group-container");
+    groupContainer.style.backgroundColor = getGroupColor(index); // Assign a unique color
+    group.forEach((word) => {
+      const wordElement = document.createElement("div");
+      wordElement.classList.add("word");
+      wordElement.textContent = word;
+      groupContainer.appendChild(wordElement);
+    });
+    wordGrid.appendChild(groupContainer);
+  });
+}
+
+// Get a unique color for each group
+function getGroupColor(index) {
+  const colors = ["#ffcccc", "#ccffcc", "#ccccff", "#ffccff"]; // Light red, green, blue, pink
+  return colors[index % colors.length];
+}
