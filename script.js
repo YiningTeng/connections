@@ -6,7 +6,7 @@ let lives = 3;
 let highScore = 0;
 let highScorePlayer = "Player";
 let selectedWords = [];
-let correctGroups = [];
+let correctGroups = []; // Store correct groups with their category names
 let allWords = []; // Store all words for the current game
 let foundGroups = []; // Track found correct groups
 let difficultyLevel = 0; // Difficulty level (0 to 100)
@@ -98,12 +98,12 @@ async function startNewGame() {
 
 // Update difficulty level based on score
 function updateDifficultyLevel() {
-  if (score < 300) {
+  if (score < 500) {
     difficultyLevel = getRandomNumber(5, 10);
-  } else if (score >= 300 && score < 500) {
+  } else if (score >= 500 && score < 1500) {
     difficultyLevel = getRandomNumber(20, 50);
-  } else if (score >= 500 && score < 1600) {
-    difficultyLevel = getRandomNumber(35, 80);
+  } else if (score >= 1500 && score < 2500) {
+    difficultyLevel = getRandomNumber(35, 70);
   } else {
     difficultyLevel = getRandomNumber(70, 100);
   }
@@ -154,15 +154,53 @@ async function generateWords() {
   }
 }
 
-// Generate correct groups (mock function, replace with actual logic)
+// Generate correct groups with category names
 async function generateCorrectGroups(words) {
-  // This is a placeholder. You'll need to implement logic to group words into 4 categories.
-  return [
-    [words[0], words[1], words[2], words[3]],
-    [words[4], words[5], words[6], words[7]],
-    [words[8], words[9], words[10], words[11]],
-    [words[12], words[13], words[14], words[15]],
-  ];
+  const prompt = `Group the following 16 words into 4 categories of 4 words each. For each category, provide a name that describes the common theme. Return the result as a JSON object with the following structure:
+  {
+    "categories": [
+      {
+        "name": "Category Name 1",
+        "words": ["word1", "word2", "word3", "word4"]
+      },
+      {
+        "name": "Category Name 2",
+        "words": ["word5", "word6", "word7", "word8"]
+      },
+      {
+        "name": "Category Name 3",
+        "words": ["word9", "word10", "word11", "word12"]
+      },
+      {
+        "name": "Category Name 4",
+        "words": ["word13", "word14", "word15", "word16"]
+      }
+    ]
+  }`;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+  try {
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    });
+    const data = await response.json();
+    const result = JSON.parse(data.candidates[0].content.parts[0].text);
+    console.log("Generated correct groups:", result); // Debugging
+    return result.categories;
+  } catch (error) {
+    console.error("Error generating correct groups:", error);
+    // Fallback groups
+    return [
+      { name: "Category 1", words: ["word1", "word2", "word3", "word4"] },
+      { name: "Category 2", words: ["word5", "word6", "word7", "word8"] },
+      { name: "Category 3", words: ["word9", "word10", "word11", "word12"] },
+      { name: "Category 4", words: ["word13", "word14", "word15", "word16"] },
+    ];
+  }
 }
 
 // Render word grid
@@ -173,7 +211,7 @@ function renderWordGrid(words) {
     wordElement.classList.add("word");
 
     // Check if the word is part of a found group
-    const isFound = foundGroups.some((group) => group.includes(word));
+    const isFound = foundGroups.some((group) => group.words.includes(word));
     if (isFound) {
       wordElement.classList.add("found"); // Mark found words
       wordElement.style.pointerEvents = "none"; // Disable further clicks
@@ -191,7 +229,7 @@ function renderWordGrid(words) {
 // Toggle word selection
 function toggleSelection(word) {
   // Check if the word is part of a found group
-  const isFound = foundGroups.some((group) => group.includes(word));
+  const isFound = foundGroups.some((group) => group.words.includes(word));
   if (isFound) {
     return; // Do nothing if the word is part of a found group
   }
@@ -212,7 +250,10 @@ submitButton.addEventListener("click", () => {
       resultMessage.textContent = "Correct!";
       score += 100;
       scoreDisplay.textContent = `Score: ${score}`;
-      foundGroups.push(selectedWords); // Add to found groups
+      const foundGroup = correctGroups.find((group) =>
+        selectedWords.every((word) => group.words.includes(word))
+      );
+      foundGroups.push(foundGroup); // Add to found groups
       selectedWords = []; // Reset selected words
       if (foundGroups.length === correctGroups.length) {
         // All groups found, start a new game
@@ -253,7 +294,7 @@ saveNameButton.addEventListener("click", () => {
 // Check if selected words form a correct group
 function checkCorrectGroup(selectedWords) {
   return correctGroups.some((group) =>
-    selectedWords.every((word) => group.includes(word))
+    selectedWords.every((word) => group.words.includes(word))
   );
 }
 
@@ -278,7 +319,15 @@ function showCorrectGroups() {
     const groupContainer = document.createElement("div");
     groupContainer.classList.add("group-container");
     groupContainer.style.backgroundColor = getGroupColor(index); // Assign a unique color
-    group.forEach((word) => {
+
+    // Add category name
+    const categoryName = document.createElement("div");
+    categoryName.classList.add("category-name");
+    categoryName.textContent = group.name;
+    groupContainer.appendChild(categoryName);
+
+    // Add words
+    group.words.forEach((word) => {
       const wordElement = document.createElement("div");
       wordElement.classList.add("word");
       wordElement.textContent = word;
