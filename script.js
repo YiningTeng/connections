@@ -323,14 +323,14 @@ function showCorrectGroups() {
     // Add category name
     const categoryName = document.createElement("div");
     categoryName.classList.add("category-name");
-    categoryName.textContent = group.name;
+    categoryName.textContent = group.name; // Use the actual category name
     groupContainer.appendChild(categoryName);
 
     // Add words
     group.words.forEach((word) => {
       const wordElement = document.createElement("div");
       wordElement.classList.add("word");
-      wordElement.textContent = word;
+      wordElement.textContent = word; // Use the actual word
       groupContainer.appendChild(wordElement);
     });
     wordGrid.appendChild(groupContainer);
