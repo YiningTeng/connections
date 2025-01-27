@@ -102,13 +102,13 @@ async function startNewGame() {
 // Update difficulty level based on score
 function updateDifficultyLevel() {
   if (score < 300) {
-    difficultyLevel = getRandomNumber(6, 15);
+    difficultyLevel = getRandomNumber(6, 20);
   } else if (score >= 300 && score < 500) {
-    difficultyLevel = getRandomNumber(13, 30);
+    difficultyLevel = getRandomNumber(40, 50);
   } else if (score >= 500 && score < 1600) {
-    difficultyLevel = getRandomNumber(20, 55);
+    difficultyLevel = getRandomNumber(30, 70);
   } else {
-    difficultyLevel = getRandomNumber(40, 90);
+    difficultyLevel = getRandomNumber(60, 90);
   }
   console.log("Difficulty Level:", difficultyLevel); // Debugging
 }
