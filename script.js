@@ -133,9 +133,9 @@ async function generateWords() {
 
   // Adjust prompt based on difficulty level
   if (difficultyLevel >= 70) {
-    prompt = "Generate 16 complex and uncommon words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+    prompt = "Generate 16 complex and uncommon words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list. Be creative";
   } else if (difficultyLevel >= 35) {
-    prompt = "Generate 16 moderately complex words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list.";
+    prompt = "Generate 16 moderately complex words that can be grouped into 4 categories of 4 words each. Return the words as a comma-separated list. Be creative";
   }
 
   const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
